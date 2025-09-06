@@ -85,3 +85,5 @@ All settings in `backend/config.py` via dataclass with environment variable fall
 - **Session continuity**: Conversation history maintained across exchanges
 - **Flexible document structure**: Graceful handling of various course document formats
 - Always use uv to run the server.  Do not use pip directly
+- use uv to run python files
+- use uv to manage all dependencies
