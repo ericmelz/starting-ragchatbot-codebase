@@ -84,3 +84,4 @@ All settings in `backend/config.py` via dataclass with environment variable fall
 - **Source transparency**: UI shows which courses informed each answer  
 - **Session continuity**: Conversation history maintained across exchanges
 - **Flexible document structure**: Graceful handling of various course document formats
+- Always use uv to run the server.  Do not use pip directly
