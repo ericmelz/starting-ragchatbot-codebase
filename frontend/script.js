@@ -126,21 +126,22 @@ function addMessage(content, type, sources = null, isWelcome = false) {
         const formattedSources = sources.map(source => {
             // Handle both old format (strings) and new format (objects with text/link)
             if (typeof source === 'string') {
-                return source;
+                return `<span class="source-item">${source}</span>`;
             } else if (source && typeof source === 'object' && 'text' in source) {
                 // Get the text, handle empty/null values
                 const sourceText = source.text || 'Unknown source';
                 
                 // Check if source has a clickable link
                 if (source.link) {
-                    return `<a href="${source.link}" target="_blank" rel="noopener noreferrer">${sourceText}</a>`;
+                    return `<a href="${source.link}" target="_blank" rel="noopener noreferrer" class="source-item source-link">${sourceText}</a>`;
                 } else {
-                    return sourceText;
+                    return `<span class="source-item">${sourceText}</span>`;
                 }
             }
             // Fallback for unexpected formats - convert to string safely
-            return typeof source === 'object' ? JSON.stringify(source) : String(source);
-        }).join(', ');
+            const fallbackText = typeof source === 'object' ? JSON.stringify(source) : String(source);
+            return `<span class="source-item">${fallbackText}</span>`;
+        }).join('');
         
         html += `
             <details class="sources-collapsible">
