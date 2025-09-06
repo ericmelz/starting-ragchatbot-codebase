@@ -127,15 +127,19 @@ function addMessage(content, type, sources = null, isWelcome = false) {
             // Handle both old format (strings) and new format (objects with text/link)
             if (typeof source === 'string') {
                 return source;
-            } else if (source.text) {
+            } else if (source && typeof source === 'object' && 'text' in source) {
+                // Get the text, handle empty/null values
+                const sourceText = source.text || 'Unknown source';
+                
                 // Check if source has a clickable link
                 if (source.link) {
-                    return `<a href="${source.link}" target="_blank" rel="noopener noreferrer">${source.text}</a>`;
+                    return `<a href="${source.link}" target="_blank" rel="noopener noreferrer">${sourceText}</a>`;
                 } else {
-                    return source.text;
+                    return sourceText;
                 }
             }
-            return source; // Fallback
+            // Fallback for unexpected formats - convert to string safely
+            return typeof source === 'object' ? JSON.stringify(source) : String(source);
         }).join(', ');
         
         html += `
