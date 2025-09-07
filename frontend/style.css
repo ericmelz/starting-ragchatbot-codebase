@@ -567,7 +567,7 @@ body {
 /* Theme Toggle Button */
 .theme-toggle {
     position: fixed;
-    top: 1rem;
+    top: 5rem;
     right: 1rem;
     width: 48px;
     height: 48px;
@@ -946,7 +946,7 @@ details[open] .suggested-header::before {
     }
     
     .theme-toggle {
-        top: 0.75rem;
+        top: 4.5rem;
         right: 0.75rem;
         width: 44px;
         height: 44px;
