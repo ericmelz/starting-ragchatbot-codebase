@@ -5,7 +5,7 @@ const API_URL = '/api';
 let currentSessionId = null;
 
 // DOM elements
-let chatMessages, chatInput, sendButton, totalCourses, courseTitles, newChatButton;
+let chatMessages, chatInput, sendButton, totalCourses, courseTitles, newChatButton, themeToggle;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -16,8 +16,10 @@ document.addEventListener('DOMContentLoaded', () => {
     totalCourses = document.getElementById('totalCourses');
     courseTitles = document.getElementById('courseTitles');
     newChatButton = document.getElementById('newChatButton');
+    themeToggle = document.getElementById('themeToggle');
     
     setupEventListeners();
+    initTheme();
     createNewSession();
     loadCourseStats();
 });
@@ -32,6 +34,17 @@ function setupEventListeners() {
     
     // New chat button
     newChatButton.addEventListener('click', startNewChat);
+    
+    // Theme toggle button
+    themeToggle.addEventListener('click', toggleTheme);
+    
+    // Keyboard shortcut for theme toggle (Ctrl/Cmd + Shift + T)
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'T') {
+            e.preventDefault();
+            toggleTheme();
+        }
+    });
     
     // Suggested questions
     document.querySelectorAll('.suggested-item').forEach(button => {
@@ -258,4 +271,56 @@ async function loadCourseStats() {
             courseTitles.innerHTML = '<span class="error">Failed to load courses</span>';
         }
     }
+}
+
+// Theme Functions
+function initTheme() {
+    // Check for saved theme preference or default to dark theme
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    // Set initial theme: saved preference > system preference > dark (default)
+    const initialTheme = savedTheme || (prefersDarkScheme ? 'dark' : 'light');
+    
+    // Apply the theme
+    setTheme(initialTheme);
+    
+    // Listen for system theme changes
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+        // Only auto-switch if no manual preference is saved
+        if (!localStorage.getItem('theme')) {
+            setTheme(e.matches ? 'dark' : 'light');
+        }
+    });
+}
+
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    
+    setTheme(newTheme);
+    
+    // Save preference to localStorage
+    localStorage.setItem('theme', newTheme);
+    
+    // Add a subtle visual feedback
+    themeToggle.style.transform = 'scale(0.95)';
+    setTimeout(() => {
+        themeToggle.style.transform = '';
+    }, 100);
+}
+
+function setTheme(theme) {
+    if (theme === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+    }
+    
+    // Update the theme toggle button title
+    const isLight = theme === 'light';
+    themeToggle.title = isLight ? 'Switch to dark theme' : 'Switch to light theme';
+    themeToggle.setAttribute('aria-label', 
+        isLight ? 'Switch to dark theme' : 'Switch to light theme'
+    );
 }
