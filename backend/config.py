@@ -18,6 +18,7 @@ class Config:
     # Document processing settings
     CHUNK_SIZE: int = 800       # Size of text chunks for vector storage
     CHUNK_OVERLAP: int = 100     # Characters to overlap between chunks
+    # Fixed: Set MAX_RESULTS to 5 (was 0, causing ChromaDB errors)
     MAX_RESULTS: int = 5         # Maximum search results to return
     MAX_HISTORY: int = 2         # Number of conversation messages to remember
     
