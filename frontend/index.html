@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Course Materials Assistant</title>
+    <title>Lessonbot - Course Materials Assistant</title>
     <link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
@@ -29,9 +29,36 @@
             </svg>
         </button>
         
-        <header>
-            <h1>Course Materials Assistant</h1>
-            <p class="subtitle">Ask questions about courses, instructors, and content</p>
+        <header class="app-header">
+            <div class="header-left">
+                <div class="logo">
+                    <svg viewBox="0 0 40 40" width="40" height="40">
+                        <defs>
+                            <linearGradient id="robotGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#2563eb;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                        <!-- Robot head base -->
+                        <rect x="8" y="12" width="24" height="20" rx="6" fill="url(#robotGradient)"/>
+                        <!-- Eyes -->
+                        <circle cx="16" cy="20" r="3" fill="white"/>
+                        <circle cx="24" cy="20" r="3" fill="white"/>
+                        <circle cx="16" cy="20" r="1.5" fill="#1e293b"/>
+                        <circle cx="24" cy="20" r="1.5" fill="#1e293b"/>
+                        <!-- Graduation cap -->
+                        <path d="M6 10 L20 6 L34 10 L20 14 Z" fill="#1e293b"/>
+                        <rect x="19" y="6" width="2" height="8" fill="#1e293b"/>
+                        <circle cx="35" cy="10" r="1" fill="#1e293b"/>
+                        <!-- Mouth -->
+                        <rect x="18" y="26" width="4" height="2" rx="1" fill="white"/>
+                    </svg>
+                </div>
+                <h1 class="app-name">Lessonbot</h1>
+            </div>
+            <div class="header-right">
+                <button class="sign-in-btn">Sign In</button>
+            </div>
         </header>
 
         <div class="main-content">
