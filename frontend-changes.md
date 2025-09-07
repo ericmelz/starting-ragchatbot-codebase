@@ -1,7 +1,7 @@
-# Frontend Changes: Code Quality Tools and Testing Infrastructure
+# Frontend Changes: Complete Enhancement Package
 
 ## Overview
-This document combines the implementation of code quality tools and comprehensive API testing infrastructure enhancements for the RAG system.
+This document combines three major enhancement implementations for the RAG system: code quality tools, API testing infrastructure, and dark/light theme toggle functionality.
 
 ## Part 1: Code Quality Tools Implementation
 
@@ -42,17 +42,6 @@ Created executable shell scripts for common development tasks:
 - **`scripts/lint.sh`** - Runs Flake8 and MyPy for linting and type checking
 - **`scripts/test.sh`** - Runs pytest with verbose output
 - **`scripts/check.sh`** - Comprehensive quality check script that runs all tools and provides a summary
-
-### 4. Code Formatting Applied
-- Formatted all Python files in `backend/` and `main.py` with Black
-- Sorted imports in all Python files with isort
-- Applied consistent code style throughout the codebase
-
-### 5. Updated Documentation (`CLAUDE.md`)
-Added Code Quality Tools section with:
-- Usage instructions for all quality tool scripts
-- Overview of each tool's configuration
-- Integration into development workflow
 
 ## Part 2: Frontend Testing Infrastructure Enhancements
 
@@ -97,15 +86,66 @@ Created extensive test suite covering all API endpoints:
 - ✅ Health check endpoint functionality
 - ✅ CORS headers verification
 
-#### Response Schema Validation
-- ✅ Validates response structure for all endpoints
-- ✅ Ensures proper data types in responses
-- ✅ Verifies nested object structures (sources, course titles, etc.)
+## Part 3: Dark/Light Theme Toggle Implementation
 
-#### Integration Workflow Tests
-- ✅ Complete query → clear session workflow
-- ✅ Multiple queries with same session ID
-- ✅ Session persistence across multiple requests
+### 1. `frontend/style.css`
+- **Light Theme Variables**: Added comprehensive light theme color scheme with proper contrast ratios
+  - Light backgrounds (`--background: #ffffff`, `--surface: #f8fafc`)
+  - Dark text for readability (`--text-primary: #1e293b`, `--text-secondary: #64748b`)
+  - Adjusted borders and shadows for light theme
+  - Maintained primary blue color scheme for consistency
+
+- **Theme Transition Effects**: Added smooth 0.3s transitions for all color properties
+  - Background colors, text colors, borders, and shadows animate smoothly
+  - Prevents jarring theme switches
+
+- **Theme Toggle Button Styling**: 
+  - Fixed position in top-right corner (responsive on mobile)
+  - Circular button with hover effects and accessibility focus states
+  - Sun/moon icon animations with rotation and opacity transitions
+  - Visual feedback on click with scale animation
+
+### 2. `frontend/index.html`
+- **Theme Toggle Button**: Added accessible theme toggle button with:
+  - Sun icon (visible in dark mode)
+  - Moon icon (visible in light mode)  
+  - Proper ARIA labels for screen readers
+  - Semantic HTML structure
+
+### 3. `frontend/script.js`
+- **Theme Management System**:
+  - `initTheme()`: Initializes theme based on saved preference or system preference
+  - `toggleTheme()`: Switches between light and dark themes
+  - `setTheme()`: Applies theme and updates button labels
+  - localStorage persistence for user preference
+  - System theme detection and auto-switching (when no manual preference)
+  - Keyboard shortcut support (Ctrl/Cmd + Shift + T)
+
+## Features Summary
+
+### ✅ Code Quality Tools
+- Black code formatting with 88-character line length
+- Import sorting with isort (Black-compatible)
+- Flake8 style checking with proper exclusions
+- MyPy static type checking with strict settings
+- Comprehensive development scripts for easy workflow integration
+
+### ✅ API Testing Infrastructure  
+- 16 comprehensive API endpoint tests
+- Mock-based testing for fast execution
+- Response schema validation
+- Error scenario coverage
+- Session management testing
+- Integration workflow validation
+
+### ✅ Dark/Light Theme Toggle
+- Circular toggle button in top-right corner
+- Sun/moon icon design with smooth transitions
+- High contrast light theme meeting accessibility standards
+- User preference persistence in localStorage
+- System theme detection and respect for OS preference
+- Keyboard shortcut (Ctrl/Cmd + Shift + T)
+- Full accessibility support with ARIA labels
 
 ## Usage
 
@@ -136,21 +176,30 @@ uv run python -m pytest -m api -v
 uv run python -m pytest tests/ -v
 ```
 
+### Theme Toggle
+- **Click**: Click the sun/moon button in the top-right corner
+- **Keyboard**: Use Ctrl/Cmd + Shift + T to toggle themes
+- **Auto-detection**: Respects system theme preference on first visit
+- **Persistence**: Manual theme choice is remembered across sessions
+
 ## Current Status
 - ✅ Code quality tools installed and configured
 - ✅ Existing code formatted with Black and isort
 - ✅ Development scripts created and working
 - ✅ API testing infrastructure complete
 - ✅ 16 API tests all passing
+- ✅ Dark/light theme toggle fully functional
+- ✅ Accessibility features implemented
 - ✅ Documentation updated
 - 📋 Code quality issues identified (to be addressed in future PRs)
 
-## Impact on Frontend Development
-This combined implementation provides:
-1. **Code Quality Assurance**: Consistent formatting and type checking
+## Impact on Development
+This comprehensive enhancement package provides:
+1. **Code Quality Assurance**: Consistent formatting, linting, and type checking
 2. **API Contract Validation**: Ensures stable backend interfaces for frontend
-3. **Error Handling Validation**: Proper error responses for frontend error handling
-4. **Session Management Testing**: Validates chat session functionality
-5. **Response Structure Guarantees**: Frontend receives data in expected format
+3. **Enhanced User Experience**: Modern theme switching with accessibility support
+4. **Testing Confidence**: Comprehensive API endpoint coverage
+5. **Developer Productivity**: Automated quality checks and development scripts
+6. **Professional Polish**: Dark/light theme toggle for modern user expectations
 
-This infrastructure provides a solid foundation for reliable frontend-backend integration in the RAG system.
+This complete enhancement package transforms the RAG system into a production-ready application with professional code quality standards, comprehensive testing, and modern user interface features.
