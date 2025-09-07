@@ -24,6 +24,28 @@ cd backend && uv run uvicorn app:app --reload --port 8000
 - Course documents are auto-loaded from `../docs/` on startup
 - No explicit migration commands - vector DB rebuilds from source documents
 
+### Code Quality Tools
+```bash
+# Format code (black + isort)
+./scripts/format.sh
+
+# Run linting checks (flake8 + mypy)
+./scripts/lint.sh
+
+# Run all quality checks (format check + lint + tests)
+./scripts/check.sh
+
+# Run tests only
+./scripts/test.sh
+```
+
+**Quality Tools Configuration:**
+- **Black**: Code formatting with 88-char line length
+- **isort**: Import sorting compatible with Black
+- **Flake8**: Style and error checking
+- **MyPy**: Static type checking
+- All tools configured in `pyproject.toml`
+
 ## Architecture Overview
 
 ### RAG System Design

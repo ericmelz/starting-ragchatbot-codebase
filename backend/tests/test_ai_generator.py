@@ -9,9 +9,9 @@ This test suite validates:
 5. System prompt behavior and tool usage
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
 
+import pytest
 from ai_generator import AIGenerator
 
 
@@ -21,7 +21,7 @@ class TestAIGeneratorBasics:
     def test_initialization(self, test_config):
         """Test AIGenerator initialization"""
         ai_gen = AIGenerator(test_config.ANTHROPIC_API_KEY, test_config.ANTHROPIC_MODEL)
-        
+
         assert ai_gen.model == test_config.ANTHROPIC_MODEL
         assert ai_gen.base_params["model"] == test_config.ANTHROPIC_MODEL
         assert ai_gen.base_params["temperature"] == 0
@@ -30,15 +30,15 @@ class TestAIGeneratorBasics:
     def test_system_prompt_structure(self):
         """Test that system prompt contains required elements"""
         system_prompt = AIGenerator.SYSTEM_PROMPT
-        
+
         # Should mention both tools
         assert "get_course_outline" in system_prompt
         assert "search_course_content" in system_prompt
-        
+
         # Should have clear usage guidelines
         assert "Course outline/structure questions" in system_prompt
         assert "Content-specific questions" in system_prompt
-        
+
         # Should have response protocol
         assert "General knowledge questions" in system_prompt
         assert "No meta-commentary" in system_prompt
@@ -46,15 +46,15 @@ class TestAIGeneratorBasics:
     def test_generate_response_without_tools(self, ai_generator_with_mock):
         """Test generate_response() without any tools"""
         ai_gen = ai_generator_with_mock
-        
+
         response = ai_gen.generate_response("What is machine learning?")
-        
+
         # Should call Anthropic API
         ai_gen.client.messages.create.assert_called_once()
-        
+
         # Should return text response
         assert response == "Test AI response"
-        
+
         # Verify call parameters
         call_args = ai_gen.client.messages.create.call_args
         assert call_args[1]["model"] == ai_gen.model
@@ -65,10 +65,12 @@ class TestAIGeneratorBasics:
     def test_generate_response_with_conversation_history(self, ai_generator_with_mock):
         """Test generate_response() with conversation history"""
         ai_gen = ai_generator_with_mock
-        
+
         history = "User: Hello\nAssistant: Hi there!"
-        response = ai_gen.generate_response("What's next?", conversation_history=history)
-        
+        response = ai_gen.generate_response(
+            "What's next?", conversation_history=history
+        )
+
         # Should include history in system prompt
         call_args = ai_gen.client.messages.create.call_args
         system_content = call_args[1]["system"]
@@ -82,23 +84,21 @@ class TestAIGeneratorToolCalling:
     def test_generate_response_with_tools(self, ai_generator_with_mock, tool_manager):
         """Test generate_response() with tools available"""
         ai_gen = ai_generator_with_mock
-        
+
         # Mock response that doesn't use tools (stop_reason != "tool_use")
         ai_gen.client.messages.create.return_value.stop_reason = "end_turn"
-        
+
         tools = tool_manager.get_tool_definitions()
         response = ai_gen.generate_response(
-            "What is machine learning?", 
-            tools=tools, 
-            tool_manager=tool_manager
+            "What is machine learning?", tools=tools, tool_manager=tool_manager
         )
-        
+
         # Should include tools in API call
         call_args = ai_gen.client.messages.create.call_args
         assert "tools" in call_args[1]
         assert "tool_choice" in call_args[1]
         assert call_args[1]["tool_choice"] == {"type": "auto"}
-        
+
         # Should have both tools
         passed_tools = call_args[1]["tools"]
         tool_names = [tool["name"] for tool in passed_tools]
@@ -108,7 +108,7 @@ class TestAIGeneratorToolCalling:
     def test_tool_execution_flow(self, ai_generator_with_mock, tool_manager):
         """Test the complete tool execution flow"""
         ai_gen = ai_generator_with_mock
-        
+
         # Mock initial response that requests tool use
         initial_response = Mock()
         initial_response.stop_reason = "tool_use"
@@ -117,85 +117,84 @@ class TestAIGeneratorToolCalling:
         initial_response.content[0].name = "search_course_content"
         initial_response.content[0].input = {"query": "test query"}
         initial_response.content[0].id = "tool_call_123"
-        
+
         # Mock final response after tool execution
         final_response = Mock()
         final_response.content = [Mock()]
         final_response.content[0].text = "Here's what I found about testing..."
-        
+
         # Set up mock to return different responses on subsequent calls
         ai_gen.client.messages.create.side_effect = [initial_response, final_response]
-        
+
         # Mock tool manager to return a result
-        with patch.object(tool_manager, 'execute_tool') as mock_execute:
+        with patch.object(tool_manager, "execute_tool") as mock_execute:
             mock_execute.return_value = "Tool execution result"
-            
+
             tools = tool_manager.get_tool_definitions()
             response = ai_gen.generate_response(
-                "What is testing?",
-                tools=tools,
-                tool_manager=tool_manager
+                "What is testing?", tools=tools, tool_manager=tool_manager
             )
-            
+
             # Should execute the tool
             mock_execute.assert_called_once_with(
-                "search_course_content",
-                query="test query"
+                "search_course_content", query="test query"
             )
-            
+
             # Should return final response
             assert response == "Here's what I found about testing..."
-            
+
             # Should make two API calls (initial + follow-up)
             assert ai_gen.client.messages.create.call_count == 2
 
-    def test_multiple_tool_calls_in_response(self, ai_generator_with_mock, tool_manager):
+    def test_multiple_tool_calls_in_response(
+        self, ai_generator_with_mock, tool_manager
+    ):
         """Test handling multiple tool calls in a single response"""
         ai_gen = ai_generator_with_mock
-        
+
         # Mock response with multiple tool calls
         initial_response = Mock()
         initial_response.stop_reason = "tool_use"
         initial_response.content = [Mock(), Mock()]
-        
+
         # First tool call
         initial_response.content[0].type = "tool_use"
         initial_response.content[0].name = "search_course_content"
         initial_response.content[0].input = {"query": "test1"}
         initial_response.content[0].id = "call_1"
-        
+
         # Second tool call
         initial_response.content[1].type = "tool_use"
         initial_response.content[1].name = "get_course_outline"
         initial_response.content[1].input = {"course_name": "Test Course"}
         initial_response.content[1].id = "call_2"
-        
+
         # Mock final response
         final_response = Mock()
         final_response.content = [Mock()]
         final_response.content[0].text = "Combined results"
-        
+
         ai_gen.client.messages.create.side_effect = [initial_response, final_response]
-        
-        with patch.object(tool_manager, 'execute_tool') as mock_execute:
+
+        with patch.object(tool_manager, "execute_tool") as mock_execute:
             mock_execute.return_value = "Tool result"
-            
+
             tools = tool_manager.get_tool_definitions()
             response = ai_gen.generate_response(
-                "Tell me about the course",
-                tools=tools,
-                tool_manager=tool_manager
+                "Tell me about the course", tools=tools, tool_manager=tool_manager
             )
-            
+
             # Should execute both tools
             assert mock_execute.call_count == 2
             mock_execute.assert_any_call("search_course_content", query="test1")
-            mock_execute.assert_any_call("get_course_outline", course_name="Test Course")
+            mock_execute.assert_any_call(
+                "get_course_outline", course_name="Test Course"
+            )
 
     def test_tool_execution_error_handling(self, ai_generator_with_mock, tool_manager):
         """Test error handling during tool execution"""
         ai_gen = ai_generator_with_mock
-        
+
         # Mock response that requests tool use
         initial_response = Mock()
         initial_response.stop_reason = "tool_use"
@@ -204,25 +203,23 @@ class TestAIGeneratorToolCalling:
         initial_response.content[0].name = "search_course_content"
         initial_response.content[0].input = {"query": "test"}
         initial_response.content[0].id = "tool_call_123"
-        
+
         # Mock final response
         final_response = Mock()
         final_response.content = [Mock()]
         final_response.content[0].text = "Error occurred"
-        
+
         ai_gen.client.messages.create.side_effect = [initial_response, final_response]
-        
+
         # Mock tool manager to return an error
-        with patch.object(tool_manager, 'execute_tool') as mock_execute:
+        with patch.object(tool_manager, "execute_tool") as mock_execute:
             mock_execute.return_value = "Tool 'search_course_content' not found"
-            
+
             tools = tool_manager.get_tool_definitions()
             response = ai_gen.generate_response(
-                "Search for something",
-                tools=tools,
-                tool_manager=tool_manager
+                "Search for something", tools=tools, tool_manager=tool_manager
             )
-            
+
             # Should still complete and return response
             assert response == "Error occurred"
 
@@ -233,12 +230,12 @@ class TestAIGeneratorMessageFlow:
     def test_message_construction_basic(self, ai_generator_with_mock):
         """Test basic message construction"""
         ai_gen = ai_generator_with_mock
-        
+
         ai_gen.generate_response("Test query")
-        
+
         call_args = ai_gen.client.messages.create.call_args
         messages = call_args[1]["messages"]
-        
+
         assert len(messages) == 1
         assert messages[0]["role"] == "user"
         assert messages[0]["content"] == "Test query"
@@ -246,22 +243,24 @@ class TestAIGeneratorMessageFlow:
     def test_message_construction_with_history(self, ai_generator_with_mock):
         """Test message construction with conversation history"""
         ai_gen = ai_generator_with_mock
-        
+
         history = "User: Hi\nAssistant: Hello!"
         ai_gen.generate_response("What's next?", conversation_history=history)
-        
+
         call_args = ai_gen.client.messages.create.call_args
         system_content = call_args[1]["system"]
-        
+
         # System prompt should include history
         assert AIGenerator.SYSTEM_PROMPT in system_content
         assert "Previous conversation:" in system_content
         assert history in system_content
 
-    def test_tool_result_message_construction(self, ai_generator_with_mock, tool_manager):
+    def test_tool_result_message_construction(
+        self, ai_generator_with_mock, tool_manager
+    ):
         """Test message construction during tool execution"""
         ai_gen = ai_generator_with_mock
-        
+
         # Mock tool use response
         initial_response = Mock()
         initial_response.stop_reason = "tool_use"
@@ -270,26 +269,26 @@ class TestAIGeneratorMessageFlow:
         initial_response.content[0].name = "search_course_content"
         initial_response.content[0].input = {"query": "test"}
         initial_response.content[0].id = "call_123"
-        
+
         final_response = Mock()
         final_response.content = [Mock()]
         final_response.content[0].text = "Final answer"
-        
+
         ai_gen.client.messages.create.side_effect = [initial_response, final_response]
-        
-        with patch.object(tool_manager, 'execute_tool') as mock_execute:
+
+        with patch.object(tool_manager, "execute_tool") as mock_execute:
             mock_execute.return_value = "Tool result"
-            
+
             ai_gen.generate_response(
                 "Test query",
                 tools=tool_manager.get_tool_definitions(),
-                tool_manager=tool_manager
+                tool_manager=tool_manager,
             )
-            
+
             # Check the second API call (after tool execution)
             second_call_args = ai_gen.client.messages.create.call_args_list[1]
             messages = second_call_args[1]["messages"]
-            
+
             # Should have: user message, assistant tool use, user tool results
             assert len(messages) == 3
             assert messages[0]["role"] == "user"  # Original query
@@ -303,31 +302,31 @@ class TestAIGeneratorErrorHandling:
     def test_anthropic_api_error_handling(self, test_config):
         """Test handling of Anthropic API errors"""
         ai_gen = AIGenerator(test_config.ANTHROPIC_API_KEY, test_config.ANTHROPIC_MODEL)
-        
+
         # Mock client to raise an exception
-        with patch.object(ai_gen.client.messages, 'create') as mock_create:
+        with patch.object(ai_gen.client.messages, "create") as mock_create:
             mock_create.side_effect = Exception("API error")
-            
+
             # Should raise the exception (not catch it)
             with pytest.raises(Exception) as exc_info:
                 ai_gen.generate_response("Test query")
-            
+
             assert "API error" in str(exc_info.value)
 
     def test_handle_tool_execution_missing_tool_manager(self, ai_generator_with_mock):
         """Test _handle_tool_execution when tool_manager is None"""
         ai_gen = ai_generator_with_mock
-        
+
         # Create mock response that would trigger tool execution
         mock_response = Mock()
         mock_response.stop_reason = "tool_use"
         mock_response.content = []
-        
+
         base_params = {"messages": [], "system": "test"}
-        
+
         # Should handle gracefully when no tool_manager provided
         result = ai_gen._handle_tool_execution(mock_response, base_params, None)
-        
+
         # Should make API call without tool results
         assert ai_gen.client.messages.create.call_count >= 1
 
@@ -335,10 +334,12 @@ class TestAIGeneratorErrorHandling:
 class TestAIGeneratorSequentialToolCalling:
     """Test sequential tool calling functionality (up to 2 rounds)"""
 
-    def test_sequential_tool_calls_two_rounds(self, ai_generator_with_mock, tool_manager):
+    def test_sequential_tool_calls_two_rounds(
+        self, ai_generator_with_mock, tool_manager
+    ):
         """Test complete sequential tool calling with 2 rounds"""
         ai_gen = ai_generator_with_mock
-        
+
         # Mock first response with tool use
         first_response = Mock()
         first_response.stop_reason = "tool_use"
@@ -347,7 +348,7 @@ class TestAIGeneratorSequentialToolCalling:
         first_response.content[0].name = "search_course_content"
         first_response.content[0].input = {"query": "testing basics"}
         first_response.content[0].id = "call_1"
-        
+
         # Mock second response with another tool use
         second_response = Mock()
         second_response.stop_reason = "tool_use"
@@ -356,39 +357,51 @@ class TestAIGeneratorSequentialToolCalling:
         second_response.content[0].name = "get_course_outline"
         second_response.content[0].input = {"course_name": "Testing Course"}
         second_response.content[0].id = "call_2"
-        
+
         # Mock final response without tool use
         final_response = Mock()
         final_response.content = [Mock()]
-        final_response.content[0].text = "Based on the search results and course outline..."
-        
+        final_response.content[0].text = (
+            "Based on the search results and course outline..."
+        )
+
         # Set up sequential API calls
-        ai_gen.client.messages.create.side_effect = [first_response, second_response, final_response]
-        
-        with patch.object(tool_manager, 'execute_tool') as mock_execute:
+        ai_gen.client.messages.create.side_effect = [
+            first_response,
+            second_response,
+            final_response,
+        ]
+
+        with patch.object(tool_manager, "execute_tool") as mock_execute:
             mock_execute.side_effect = ["Search result 1", "Course outline result"]
-            
+
             response = ai_gen.generate_response(
                 "Compare testing approaches in different courses",
                 tools=tool_manager.get_tool_definitions(),
-                tool_manager=tool_manager
+                tool_manager=tool_manager,
             )
-            
+
             # Should execute both tools in sequence
             assert mock_execute.call_count == 2
-            mock_execute.assert_any_call("search_course_content", query="testing basics")
-            mock_execute.assert_any_call("get_course_outline", course_name="Testing Course")
-            
+            mock_execute.assert_any_call(
+                "search_course_content", query="testing basics"
+            )
+            mock_execute.assert_any_call(
+                "get_course_outline", course_name="Testing Course"
+            )
+
             # Should make 3 API calls (initial + 2 intermediate)
             assert ai_gen.client.messages.create.call_count == 3
-            
+
             # Should return final response
             assert response == "Based on the search results and course outline..."
 
-    def test_sequential_tool_calls_stops_at_max_rounds(self, ai_generator_with_mock, tool_manager):
+    def test_sequential_tool_calls_stops_at_max_rounds(
+        self, ai_generator_with_mock, tool_manager
+    ):
         """Test that sequential calling stops at MAX_ROUNDS (2)"""
         ai_gen = ai_generator_with_mock
-        
+
         # Create responses that keep requesting more tools
         tool_response_template = Mock()
         tool_response_template.stop_reason = "tool_use"
@@ -397,41 +410,43 @@ class TestAIGeneratorSequentialToolCalling:
         tool_response_template.content[0].name = "search_course_content"
         tool_response_template.content[0].input = {"query": "test"}
         tool_response_template.content[0].id = "call_x"
-        
+
         final_response = Mock()
         final_response.content = [Mock()]
         final_response.content[0].text = "Final answer after 2 rounds"
-        
+
         # Mock to return tool_use responses, but final call should be without tools
         ai_gen.client.messages.create.side_effect = [
             tool_response_template,  # Round 1
             tool_response_template,  # Round 2
-            final_response           # Final call without tools
+            final_response,  # Final call without tools
         ]
-        
-        with patch.object(tool_manager, 'execute_tool') as mock_execute:
+
+        with patch.object(tool_manager, "execute_tool") as mock_execute:
             mock_execute.return_value = "Tool result"
-            
+
             response = ai_gen.generate_response(
                 "Complex query",
                 tools=tool_manager.get_tool_definitions(),
-                tool_manager=tool_manager
+                tool_manager=tool_manager,
             )
-            
+
             # Should only execute tools for 2 rounds
             assert mock_execute.call_count == 2
-            
+
             # Should make 3 API calls (2 with tools + 1 final without tools)
             assert ai_gen.client.messages.create.call_count == 3
-            
+
             # Final call should be without tools
             final_call_args = ai_gen.client.messages.create.call_args_list[2]
             assert "tools" not in final_call_args[1]
 
-    def test_sequential_calling_stops_early_when_no_more_tools(self, ai_generator_with_mock, tool_manager):
+    def test_sequential_calling_stops_early_when_no_more_tools(
+        self, ai_generator_with_mock, tool_manager
+    ):
         """Test that sequential calling stops when Claude chooses not to use more tools"""
         ai_gen = ai_generator_with_mock
-        
+
         # First response uses tools
         first_response = Mock()
         first_response.stop_reason = "tool_use"
@@ -440,37 +455,39 @@ class TestAIGeneratorSequentialToolCalling:
         first_response.content[0].name = "search_course_content"
         first_response.content[0].input = {"query": "test"}
         first_response.content[0].id = "call_1"
-        
+
         # Second response does NOT use tools (stop_reason != "tool_use")
         second_response = Mock()
         second_response.stop_reason = "end_turn"
         second_response.content = [Mock()]
         second_response.content[0].text = "Here's my answer based on the search"
-        
+
         ai_gen.client.messages.create.side_effect = [first_response, second_response]
-        
-        with patch.object(tool_manager, 'execute_tool') as mock_execute:
+
+        with patch.object(tool_manager, "execute_tool") as mock_execute:
             mock_execute.return_value = "Search result"
-            
+
             response = ai_gen.generate_response(
                 "Simple query",
                 tools=tool_manager.get_tool_definitions(),
-                tool_manager=tool_manager
+                tool_manager=tool_manager,
             )
-            
+
             # Should only execute one tool
             assert mock_execute.call_count == 1
-            
+
             # Should make 2 API calls (not the maximum 3)
             assert ai_gen.client.messages.create.call_count == 2
-            
+
             # Should return the second response
             assert response == "Here's my answer based on the search"
 
-    def test_sequential_calling_message_flow(self, ai_generator_with_mock, tool_manager):
+    def test_sequential_calling_message_flow(
+        self, ai_generator_with_mock, tool_manager
+    ):
         """Test that messages are properly constructed during sequential calling"""
         ai_gen = ai_generator_with_mock
-        
+
         # Mock tool use response
         tool_response = Mock()
         tool_response.stop_reason = "tool_use"
@@ -479,27 +496,27 @@ class TestAIGeneratorSequentialToolCalling:
         tool_response.content[0].name = "search_course_content"
         tool_response.content[0].input = {"query": "test"}
         tool_response.content[0].id = "call_1"
-        
+
         # Mock final response
         final_response = Mock()
         final_response.content = [Mock()]
         final_response.content[0].text = "Final answer"
-        
+
         ai_gen.client.messages.create.side_effect = [tool_response, final_response]
-        
-        with patch.object(tool_manager, 'execute_tool') as mock_execute:
+
+        with patch.object(tool_manager, "execute_tool") as mock_execute:
             mock_execute.return_value = "Tool execution result"
-            
+
             ai_gen.generate_response(
                 "Test query",
                 tools=tool_manager.get_tool_definitions(),
-                tool_manager=tool_manager
+                tool_manager=tool_manager,
             )
-            
+
             # Check the message flow in the second API call
             second_call_args = ai_gen.client.messages.create.call_args_list[1]
             messages = second_call_args[1]["messages"]
-            
+
             # Should have: original user message, assistant tool response, user tool results
             assert len(messages) == 3
             assert messages[0]["role"] == "user"
@@ -507,7 +524,7 @@ class TestAIGeneratorSequentialToolCalling:
             assert messages[1]["role"] == "assistant"
             assert messages[1]["content"] == tool_response.content
             assert messages[2]["role"] == "user"
-            
+
             # Tool results should be properly formatted
             tool_results = messages[2]["content"]
             assert len(tool_results) == 1
@@ -515,10 +532,12 @@ class TestAIGeneratorSequentialToolCalling:
             assert tool_results[0]["tool_use_id"] == "call_1"
             assert tool_results[0]["content"] == "Tool execution result"
 
-    def test_sequential_calling_with_tool_errors(self, ai_generator_with_mock, tool_manager):
+    def test_sequential_calling_with_tool_errors(
+        self, ai_generator_with_mock, tool_manager
+    ):
         """Test sequential calling when tools fail during execution"""
         ai_gen = ai_generator_with_mock
-        
+
         # Mock tool use response
         tool_response = Mock()
         tool_response.stop_reason = "tool_use"
@@ -527,37 +546,39 @@ class TestAIGeneratorSequentialToolCalling:
         tool_response.content[0].name = "search_course_content"
         tool_response.content[0].input = {"query": "test"}
         tool_response.content[0].id = "call_1"
-        
+
         final_response = Mock()
         final_response.content = [Mock()]
         final_response.content[0].text = "Handled the error gracefully"
-        
+
         ai_gen.client.messages.create.side_effect = [tool_response, final_response]
-        
-        with patch.object(tool_manager, 'execute_tool') as mock_execute:
+
+        with patch.object(tool_manager, "execute_tool") as mock_execute:
             # Tool execution raises an exception
             mock_execute.side_effect = Exception("Tool execution failed")
-            
+
             response = ai_gen.generate_response(
                 "Test query",
                 tools=tool_manager.get_tool_definitions(),
-                tool_manager=tool_manager
+                tool_manager=tool_manager,
             )
-            
+
             # Should still continue with the flow
             assert response == "Handled the error gracefully"
-            
+
             # Check that error was captured in tool results
             second_call_args = ai_gen.client.messages.create.call_args_list[1]
             messages = second_call_args[1]["messages"]
             tool_results = messages[2]["content"]
-            
+
             assert "Tool execution failed" in tool_results[0]["content"]
 
-    def test_sequential_calling_api_error_fallback(self, ai_generator_with_mock, tool_manager):
+    def test_sequential_calling_api_error_fallback(
+        self, ai_generator_with_mock, tool_manager
+    ):
         """Test fallback behavior when intermediate API calls fail"""
         ai_gen = ai_generator_with_mock
-        
+
         # Mock initial tool response
         tool_response = Mock()
         tool_response.stop_reason = "tool_use"
@@ -566,37 +587,39 @@ class TestAIGeneratorSequentialToolCalling:
         tool_response.content[0].name = "search_course_content"
         tool_response.content[0].input = {"query": "test"}
         tool_response.content[0].id = "call_1"
-        
+
         final_response = Mock()
         final_response.content = [Mock()]
         final_response.content[0].text = "Fallback response"
-        
+
         # First call succeeds, second call fails, third call (fallback) succeeds
         ai_gen.client.messages.create.side_effect = [
             tool_response,
             Exception("API error"),
-            final_response
+            final_response,
         ]
-        
-        with patch.object(tool_manager, 'execute_tool') as mock_execute:
+
+        with patch.object(tool_manager, "execute_tool") as mock_execute:
             mock_execute.return_value = "Tool result"
-            
+
             response = ai_gen.generate_response(
                 "Test query",
                 tools=tool_manager.get_tool_definitions(),
-                tool_manager=tool_manager
+                tool_manager=tool_manager,
             )
-            
+
             # Should fallback to final API call
             assert response == "Fallback response"
-            
+
             # Should make 3 API calls (initial + failed intermediate + final fallback)
             assert ai_gen.client.messages.create.call_count == 3
 
-    def test_backward_compatibility_single_round(self, ai_generator_with_mock, tool_manager):
+    def test_backward_compatibility_single_round(
+        self, ai_generator_with_mock, tool_manager
+    ):
         """Test that single-round tool calling still works (backward compatibility)"""
         ai_gen = ai_generator_with_mock
-        
+
         # Mock response that uses tools and then stops
         tool_response = Mock()
         tool_response.stop_reason = "tool_use"
@@ -605,23 +628,23 @@ class TestAIGeneratorSequentialToolCalling:
         tool_response.content[0].name = "search_course_content"
         tool_response.content[0].input = {"query": "simple query"}
         tool_response.content[0].id = "call_1"
-        
+
         final_response = Mock()
         final_response.stop_reason = "end_turn"
         final_response.content = [Mock()]
         final_response.content[0].text = "Simple answer"
-        
+
         ai_gen.client.messages.create.side_effect = [tool_response, final_response]
-        
-        with patch.object(tool_manager, 'execute_tool') as mock_execute:
+
+        with patch.object(tool_manager, "execute_tool") as mock_execute:
             mock_execute.return_value = "Tool result"
-            
+
             response = ai_gen.generate_response(
                 "Simple query",
                 tools=tool_manager.get_tool_definitions(),
-                tool_manager=tool_manager
+                tool_manager=tool_manager,
             )
-            
+
             # Should work exactly like before
             assert mock_execute.call_count == 1
             assert ai_gen.client.messages.create.call_count == 2
@@ -634,19 +657,19 @@ class TestAIGeneratorConfiguration:
     def test_base_params_configuration(self, test_config):
         """Test that base_params are properly configured"""
         ai_gen = AIGenerator(test_config.ANTHROPIC_API_KEY, test_config.ANTHROPIC_MODEL)
-        
+
         expected_params = {
             "model": test_config.ANTHROPIC_MODEL,
             "temperature": 0,
-            "max_tokens": 800
+            "max_tokens": 800,
         }
-        
+
         assert ai_gen.base_params == expected_params
 
     def test_different_model_configuration(self):
         """Test AIGenerator with different model"""
         different_model = "claude-3-haiku-20240307"
         ai_gen = AIGenerator("test-key", different_model)
-        
+
         assert ai_gen.model == different_model
         assert ai_gen.base_params["model"] == different_model

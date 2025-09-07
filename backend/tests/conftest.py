@@ -2,22 +2,24 @@
 Pytest configuration and shared fixtures for RAG system tests.
 """
 
-import pytest
-import tempfile
 import os
 import shutil
-from unittest.mock import Mock, patch
 
 # Add parent directory to path for imports
 import sys
+import tempfile
+from unittest.mock import Mock, patch
+
+import pytest
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from config import Config
-from vector_store import VectorStore
-from search_tools import CourseSearchTool, CourseOutlineTool, ToolManager
 from ai_generator import AIGenerator
+from config import Config
+from models import Course, CourseChunk, Lesson
 from rag_system import RAGSystem
-from models import Course, Lesson, CourseChunk
+from search_tools import CourseOutlineTool, CourseSearchTool, ToolManager
+from vector_store import VectorStore
 
 
 @pytest.fixture
@@ -61,29 +63,45 @@ def temp_chroma_path():
 def test_vector_store(test_config, temp_chroma_path):
     """Create a VectorStore instance for testing with proper config"""
     test_config.CHROMA_PATH = temp_chroma_path
-    return VectorStore(temp_chroma_path, test_config.EMBEDDING_MODEL, test_config.MAX_RESULTS)
+    return VectorStore(
+        temp_chroma_path, test_config.EMBEDDING_MODEL, test_config.MAX_RESULTS
+    )
 
 
 @pytest.fixture
 def broken_vector_store(broken_config, temp_chroma_path):
     """Create a VectorStore instance with the broken MAX_RESULTS=0 config"""
     broken_config.CHROMA_PATH = temp_chroma_path
-    return VectorStore(temp_chroma_path, broken_config.EMBEDDING_MODEL, broken_config.MAX_RESULTS)
+    return VectorStore(
+        temp_chroma_path, broken_config.EMBEDDING_MODEL, broken_config.MAX_RESULTS
+    )
 
 
 @pytest.fixture
 def sample_course():
     """Create a sample course for testing"""
     lessons = [
-        Lesson(lesson_number=1, title="Introduction to Testing", lesson_link="https://example.com/lesson1"),
-        Lesson(lesson_number=2, title="Advanced Testing Concepts", lesson_link="https://example.com/lesson2"),
-        Lesson(lesson_number=3, title="Integration Testing", lesson_link="https://example.com/lesson3"),
+        Lesson(
+            lesson_number=1,
+            title="Introduction to Testing",
+            lesson_link="https://example.com/lesson1",
+        ),
+        Lesson(
+            lesson_number=2,
+            title="Advanced Testing Concepts",
+            lesson_link="https://example.com/lesson2",
+        ),
+        Lesson(
+            lesson_number=3,
+            title="Integration Testing",
+            lesson_link="https://example.com/lesson3",
+        ),
     ]
     return Course(
         title="Test Course",
         instructor="Test Instructor",
         course_link="https://example.com/course",
-        lessons=lessons
+        lessons=lessons,
     )
 
 
@@ -95,26 +113,26 @@ def sample_course_chunks(sample_course):
             course_title=sample_course.title,
             lesson_number=1,
             chunk_index=0,
-            content="This is lesson 1 content about testing basics and fundamentals."
+            content="This is lesson 1 content about testing basics and fundamentals.",
         ),
         CourseChunk(
             course_title=sample_course.title,
             lesson_number=1,
             chunk_index=1,
-            content="More lesson 1 content covering test design patterns."
+            content="More lesson 1 content covering test design patterns.",
         ),
         CourseChunk(
             course_title=sample_course.title,
             lesson_number=2,
             chunk_index=2,
-            content="Lesson 2 discusses advanced testing concepts like mocking and fixtures."
+            content="Lesson 2 discusses advanced testing concepts like mocking and fixtures.",
         ),
         CourseChunk(
             course_title=sample_course.title,
             lesson_number=3,
             chunk_index=3,
-            content="Lesson 3 covers integration testing between different system components."
-        )
+            content="Lesson 3 covers integration testing between different system components.",
+        ),
     ]
 
 
@@ -179,18 +197,20 @@ def ai_generator_with_mock(test_config, mock_anthropic_client):
 @pytest.fixture
 def rag_system(test_config):
     """Create a RAGSystem instance for integration testing"""
-    with patch('rag_system.VectorStore') as mock_vs, \
-         patch('rag_system.AIGenerator') as mock_ai:
-        
+    with (
+        patch("rag_system.VectorStore") as mock_vs,
+        patch("rag_system.AIGenerator") as mock_ai,
+    ):
+
         # Mock the VectorStore and AIGenerator to avoid real API calls in integration tests
         mock_vector_store = Mock()
         mock_ai_generator = Mock()
-        
+
         mock_vs.return_value = mock_vector_store
         mock_ai.return_value = mock_ai_generator
-        
+
         rag = RAGSystem(test_config)
         rag.mock_vector_store = mock_vector_store  # Store references for test access
         rag.mock_ai_generator = mock_ai_generator
-        
+
         return rag
